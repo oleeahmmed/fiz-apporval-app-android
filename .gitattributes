@@ -1,0 +1,20 @@
+# Normalise line endings so Windows checkouts match CI and Linux machines.
+* text=auto eol=lf
+
+# Keep Windows batch files usable.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary assets must never be converted.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.jar binary
+*.jks binary
+*.keystore binary
+*.wasm binary
+*.ttf binary
+*.otf binary
