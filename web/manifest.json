@@ -1,11 +1,11 @@
 {
-    "name": "FIZ Price",
-    "short_name": "FIZ Price",
+    "name": "FIZ OA System",
+    "short_name": "FIZ OA",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#FFFFFF",
     "theme_color": "#F5821F",
-    "description": "FIZ Price App - live prices and offers from Faiza.",
+    "description": "FIZ OA System - live approvals, prices and offers from Faiza.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -1,6 +1,6 @@
-# FIZ Price — Flutter app (fiz-apporval-app-android)
+# FIZ OA System — Flutter app (fiz-apporval-app-android)
 
-A Flutter wrapper around the live FIZ Price web app at
+A Flutter wrapper around the live FIZ approval web app at
 <https://www.fizbd.com/fizPriceApp/>. One code base, two targets:
 
 | Target | Shell | What the user gets |
@@ -68,12 +68,15 @@ Declared in `android/app/src/main/AndroidManifest.xml`:
 | `INTERNET` | The whole app is served from `fizbd.com` |
 | `ACCESS_NETWORK_STATE` | Offline banner + automatic reload when the network returns |
 | `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION` | Backs `navigator.geolocation` inside the WebView |
+| `CAMERA`, `RECORD_AUDIO` | Backs `getUserMedia` (camera preview, photo capture) inside the WebView |
 
-Location is requested **on demand**: the first time the web page calls
-`navigator.geolocation`, Android's prompt appears, and the answer is passed back
-to the WebView by `_onGeolocationPrompt`. Users can re-trigger the prompt from the
-overflow menu → *Location access*. `android.hardware.location` is marked
-`required="false"` so tablets without GPS can still install the app.
+Location and camera are requested **on demand**: the first time the web page
+calls `navigator.geolocation` or `getUserMedia`, Android's prompt appears and the
+answer is handed back to the WebView by `_onGeolocationPrompt` and
+`_onWebPermissionRequest`. Users can re-trigger either prompt from the overflow
+menu → *Location access* / *Camera access*. `android.hardware.location` and
+`android.hardware.camera` are marked `required="false"` so tablets without
+those sensors can still install the app.
 
 ## Brand assets
 

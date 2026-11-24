@@ -9,7 +9,7 @@ import 'package:webview_flutter_android/webview_flutter_android.dart';
 
 import '../core/app_config.dart';
 import '../core/app_theme.dart';
-import '../core/location_permission.dart';
+import '../core/device_permissions.dart';
 import '../widgets/brand_mark.dart';
 import '../widgets/status_panel.dart';
 
@@ -96,6 +96,9 @@ class _HomeScreenState extends State<HomeScreen> {
     await platform.setGeolocationPermissionsPromptCallbacks(
       onShowPrompt: _onGeolocationPrompt,
     );
+    // Without this callback the plugin denies every getUserMedia request,
+    // which is what made the in-app camera look broken.
+    await platform.setOnPlatformPermissionRequest(_onWebPermissionRequest);
   }
 
   /// Android hands geolocation to web content only once the host app is allowed
@@ -103,8 +106,50 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<GeolocationPermissionsResponse> _onGeolocationPrompt(
     GeolocationPermissionsRequestParams request,
   ) async {
-    final bool granted = await LocationPermission.ensureGranted();
+    final bool granted = await DevicePermissions.ensureLocation();
     return GeolocationPermissionsResponse(allow: granted, retain: true);
+  }
+
+  /// Answers `getUserMedia` (camera / microphone) coming from the web page.
+  ///
+  /// The WebView request is all-or-nothing, so every requested resource has to
+  /// be granted by the OS before the page gets access.
+  Future<void> _onWebPermissionRequest(
+    PlatformWebViewPermissionRequest request,
+  ) async {
+    bool granted = true;
+
+    if (request.types.contains(WebViewPermissionResourceType.camera)) {
+      granted = await DevicePermissions.ensureCamera();
+    }
+    if (granted &&
+        request.types.contains(WebViewPermissionResourceType.microphone)) {
+      granted = await DevicePermissions.ensureMicrophone();
+    }
+
+    if (granted) {
+      await request.grant();
+      return;
+    }
+
+    await request.deny();
+    _showPermissionHelp(
+      'Camera access is blocked. Allow it from the app settings.',
+    );
+  }
+
+  void _showPermissionHelp(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(
+          label: 'Settings',
+          onPressed: DevicePermissions.openSettings,
+        ),
+      ),
+    );
   }
 
   void _onWebResourceError(WebResourceError error) {
@@ -187,27 +232,37 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _requestLocationPermission() async {
-    final bool granted = await LocationPermission.ensureGranted();
+    final bool granted = await DevicePermissions.ensureLocation();
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          granted
-              ? 'Location access allowed.'
-              : 'Location access denied. Enable it from the app settings.',
-        ),
-        action: granted
-            ? null
-            : SnackBarAction(
-                label: 'Settings',
-                onPressed: LocationPermission.openSettings,
-              ),
-      ),
-    );
-    if (granted) {
-      await _controller.reload();
+    if (!granted) {
+      _showPermissionHelp(
+        'Location access denied. Enable it from the app settings.',
+      );
+      return;
     }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Location access allowed.')),
+    );
+    await _controller.reload();
+  }
+
+  Future<void> _requestCameraPermission() async {
+    final bool granted = await DevicePermissions.ensureCamera();
+    if (!mounted) return;
+
+    if (!granted) {
+      _showPermissionHelp(
+        'Camera access denied. Enable it from the app settings.',
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Camera access allowed.')),
+    );
+    await _controller.reload();
   }
 
   Future<void> _handleSystemBack() async {
@@ -358,6 +413,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 _openCurrentPageInBrowser();
               case 'location':
                 _requestLocationPermission();
+              case 'camera':
+                _requestCameraPermission();
               case 'about':
                 _showAboutDialog();
             }
@@ -379,6 +436,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 contentPadding: EdgeInsets.zero,
                 leading: Icon(Icons.my_location_rounded),
                 title: Text('Location access'),
+              ),
+            ),
+            PopupMenuItem<String>(
+              value: 'camera',
+              child: ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.photo_camera_outlined),
+                title: Text('Camera access'),
               ),
             ),
             PopupMenuItem<String>(
